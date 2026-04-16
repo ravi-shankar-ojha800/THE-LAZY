@@ -1,1 +1,0 @@
-# Fix Homepage & Intro Visibility Issues\n\n## Steps:\n\n### 1. [PENDING] Create TODO.md (done)\n### 2. [PENDING] Update style.css: Ensure media layers visible (opacity:1, video fixes)\n### 3. [PENDING] Update script.js: Home anim, intro video reliability, remove pause\n### 4. [PENDING] Test & update TODO\n### 5. [PENDING] Complete & demo\n
