@@ -67,12 +67,56 @@ document.addEventListener("DOMContentLoaded", () => {
             if (this.noiseGain) {
                 gsap.to(this.noiseGain.gain, { value: 0.003 + intensity * 0.012, duration: 2 });
             }
+        },
+        // Background Cinema Audio
+        bgAudio: document.getElementById('bg-cinema-audio'),
+        bgMusicEnabled: true,
+        bgMusicStarted: false,
+        initBgMusic() {
+            if (this.bgMusicStarted || !this.bgAudio || !this.bgMusicEnabled) return;
+            this.bgAudio.volume = 0;
+            const playPromise = this.bgAudio.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    this.bgMusicStarted = true;
+                    gsap.to(this.bgAudio, { volume: 0.4, duration: 3 });
+                }).catch(err => {
+                    console.log("BG Music Autoplay blocked. Waiting for interaction.");
+                });
+            }
+        },
+        toggleBgMusic(forceState) {
+            if (!this.bgAudio) return;
+            this.bgMusicEnabled = forceState !== undefined ? forceState : !this.bgMusicEnabled;
+            
+            const toggleBtn = document.getElementById('toggle-bg-music');
+            if (toggleBtn) {
+                toggleBtn.classList.toggle('active', this.bgMusicEnabled);
+            }
+
+            if (this.bgMusicEnabled) {
+                if (!this.bgMusicStarted) {
+                    this.initBgMusic();
+                } else {
+                    this.bgAudio.play();
+                    gsap.to(this.bgAudio, { volume: 0.4, duration: 1.5 });
+                }
+            } else {
+                gsap.to(this.bgAudio, { volume: 0, duration: 1.5, onComplete: () => this.bgAudio.pause() });
+            }
         }
     };
+
+    document.addEventListener('click', (e) => {
+        AudioEngine.init();
+        AudioEngine.initAmbient();
+        AudioEngine.initBgMusic();
+    }, { once: false });
 
     document.addEventListener('mousedown', (e) => {
         AudioEngine.init();
         AudioEngine.initAmbient();
+        AudioEngine.initBgMusic();
         createRipple(e);
     });
 
@@ -600,6 +644,21 @@ document.addEventListener("DOMContentLoaded", () => {
     btnDockSettings.addEventListener('click', () => {
         AudioEngine.playClick();
         settingsPanelDock.classList.remove('hidden-panel');
+    });
+
+    // Toggle Listeners
+    document.querySelectorAll('.toggle-switch').forEach(toggle => {
+        toggle.addEventListener('click', () => {
+            AudioEngine.playClick();
+            const id = toggle.id;
+            
+            if (id === 'toggle-bg-music') {
+                AudioEngine.toggleBgMusic();
+            } else {
+                toggle.classList.toggle('active');
+                // Other toggles handled here if needed
+            }
+        });
     });
 
     btnDockSearch.addEventListener('click', () => {
