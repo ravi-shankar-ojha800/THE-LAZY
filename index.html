@@ -164,7 +164,10 @@
             <div class="slider-track" id="slider-track">
                 <!-- Slide 1: Video -->
                 <div class="slide" data-index="0" data-type="video">
-                    <div class="bg-layer" style="background-image: url('assets/video png.png');"></div>
+                    <div class="bg-layer" id="video-slide-bg" style="background-image: url('assets/video png.png');"></div>
+                    <video id="homii-video" class="bg-layer media-layer hidden" muted playsinline preload="auto">
+                        <source src="assets/homii.mp4" type="video/mp4">
+                    </video>
                     <div class="slide-content">
                         <div class="slide-side-label">01 — VIDEO</div>
                         <h1 class="ae-reveal">VIDEO</h1>

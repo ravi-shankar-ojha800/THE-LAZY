@@ -379,20 +379,30 @@ document.addEventListener("DOMContentLoaded", () => {
     btnContinue.addEventListener('click', () => {
         AudioEngine.playClick();
 
+        // Start video playback immediately if applicable
+        const isVideoPlaying = initHomiiVideoPlayback();
+
+        // If video is playing, make transition snappier
+        const outDur = isVideoPlaying ? 0.4 : 0.8;
+        const inDur  = isVideoPlaying ? 0.6 : 1.8;
+
         gsap.to(viewIntro, {
             opacity: 0, scale: 0.96, filter: 'blur(18px)',
-            duration: 0.8, ease: "expo.inOut",
+            duration: outDur, ease: "expo.inOut",
             onComplete: () => {
                 viewIntro.classList.remove('active');
                 viewIntro.style.filter = '';
 
                 viewMenu.classList.add('active');
                 viewMenu.style.opacity = 0;
-                gsap.set(viewMenu, { scale: 1.08, filter: 'blur(28px)' });
+                
+                // Reduce blur if video is playing for immediate clarity
+                const blurAmount = isVideoPlaying ? 'blur(4px)' : 'blur(28px)';
+                gsap.set(viewMenu, { scale: 1.08, filter: blurAmount });
 
                 gsap.to(viewMenu, {
                     opacity: 1, scale: 1, filter: 'blur(0px)',
-                    duration: 1.8, ease: "expo.out",
+                    duration: inDur, ease: "expo.out",
                     onComplete: () => {
                         document.getElementById('bottom-floating-ui').classList.remove('hidden');
                         gsap.fromTo('#bottom-floating-ui',
@@ -469,6 +479,64 @@ document.addEventListener("DOMContentLoaded", () => {
         uiContainer.classList.remove('hidden');
         uiContainer.classList.add('active-btn-shown');
         gsap.fromTo(uiContainer, { opacity: 0, x: -24 }, { opacity: 1, x: 0, duration: 1, ease: "power2.out" });
+    }
+
+    /* ================================================================
+       ONE-TIME INTRO VIDEO (VIDEO PAGE)
+       ================================================================ */
+    function initHomiiVideoPlayback() {
+        const homiiVideo = document.getElementById('homii-video');
+        const slideBg   = document.getElementById('video-slide-bg');
+        
+        if (!homiiVideo || !slideBg) return false;
+
+        // Session check (only once per page load/re-entry in SPA)
+        if (window.homiiVideoPlayed) {
+            homiiVideo.classList.add('hidden');
+            slideBg.style.opacity = 1;
+            return false;
+        }
+
+        // Setup video
+        homiiVideo.classList.remove('hidden');
+        gsap.set(homiiVideo, { opacity: 1 });
+        gsap.set(slideBg, { opacity: 0 });
+        
+        homiiVideo.currentTime = 0;
+        const playPromise = homiiVideo.play();
+        
+        if (playPromise !== undefined) {
+            playPromise.catch(err => {
+                console.log("Homii video autoplay blocked:", err);
+                skipHomiiVideo(); // Skip if blocked
+            });
+        }
+
+        const onHomiiEnded = () => skipHomiiVideo();
+        homiiVideo.addEventListener('ended', onHomiiEnded, { once: true });
+
+        function skipHomiiVideo() {
+            window.homiiVideoPlayed = true;
+            
+            // Smooth fade transition (300-600ms as requested)
+            gsap.to(homiiVideo, {
+                opacity: 0,
+                duration: 0.6,
+                ease: "power2.inOut",
+                onComplete: () => {
+                    homiiVideo.pause();
+                    homiiVideo.classList.add('hidden');
+                }
+            });
+            
+            gsap.to(slideBg, {
+                opacity: 1,
+                duration: 0.6,
+                ease: "power2.inOut"
+            });
+        }
+
+        return true;
     }
 
     /* ================================================================
