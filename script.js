@@ -1,4 +1,4 @@
-/* ====================================================================
+* ====================================================================
    THE LAZY — Main JavaScript Logic v3.0
    Cinematic Portfolio Edition
    ==================================================================== */
@@ -626,7 +626,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     btnCloseTool.addEventListener('click', () => {
         toolOverlay.classList.remove('active');
-        if (window.currentVideoEditor) { window.currentVideoEditor.cleanup(); window.currentVideoEditor = null; }
+        if (window.currentVideoEditor?.cleanup) window.currentVideoEditor.cleanup();
+        if (window.currentPhotoEditor?.cleanup) window.currentPhotoEditor.cleanup();
+        if (window.currentPdfEditor?.cleanup) window.currentPdfEditor.cleanup();
+        if (window.currentAudioEditor?.cleanup) window.currentAudioEditor.cleanup();
+        if (window.currentCodeEditor?.cleanup) window.currentCodeEditor.cleanup();
+        window.currentVideoEditor = null;
+        window.currentPhotoEditor = null;
+        window.currentPdfEditor = null;
+        window.currentAudioEditor = null;
+        window.currentCodeEditor = null;
         setTimeout(() => { toolOverlay.classList.add('hidden'); toolContentArea.innerHTML = ''; }, 500);
     });
 
@@ -711,9 +720,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         <h3 class="bento-title text-black mt-3">TRANSFORM & SPEED</h3>
                         <div class="bento-sliders">
                             <div class="b-slider-row"><span>SCL</span><input type="range" id="adj-scale" min="10" max="200" value="100"></div>
-                            <div class="b-slider-row"><span>POS</span><input type="range" value="50"></div>
-                            <div class="b-slider-row"><span>ROT</span><input type="range" value="0" min="-180" max="180"></div>
-                            <div class="b-slider-row"><span>SPD</span><input type="range" value="100" min="10" max="400"></div>
+                            <div class="b-slider-row"><span>POS</span><input type="range" id="adj-pos" value="50" min="0" max="100"></div>
+                            <div class="b-slider-row"><span>ROT</span><input type="range" id="adj-rot" value="0" min="-180" max="180"></div>
+                            <div class="b-slider-row"><span>SPD</span><input type="range" id="adj-spd" value="100" min="10" max="400"></div>
                             <div class="b-slider-row" style="display:none;"><input type="range" id="adj-opac" value="100"></div>
                         </div>
 
@@ -723,7 +732,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             <label class="fx-pill dark"><input type="checkbox" id="fx-glow"> GLOW</label>
                             <label class="fx-pill"><input type="checkbox" id="fx-vhs"> VHS GLITCH</label>
                             <label class="fx-pill dark"><input type="checkbox" id="fx-grain"> FILM GRAIN</label>
-                            <label class="fx-pill">DISSOLVE</label>
+                            <label class="fx-pill"><input type="checkbox" id="fx-dissolve" style="display:none;">DISSOLVE</label>
                             <label class="fx-pill">SLIDE WIPE</label>
                         </div>
                         
@@ -731,12 +740,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         <div class="bento-pills">
                             <label class="fx-pill ai">Auto Cut Silence</label>
                             <label class="fx-pill ai">Auto Subtitles</label>
-                            <label class="fx-pill ai dark">Remove Background</label>
+                            <label class="fx-pill ai dark" id="btn-remove-bg" style="cursor:pointer;">Remove Background</label>
                             <label class="fx-pill ai">Beat Sync</label>
                         </div>
 
                         <h3 class="bento-title text-black mt-3">TEXT & OVERLAYS</h3>
-                        <div class="b-slider-row mt-1" style="margin-bottom:8px;"><button style="width:100%; padding:8px; border-radius:10px; border:1px solid #ccc; background:#fff; cursor:pointer;" onclick="AudioEngine.playClick()">+ Add Text Layer</button></div>
+                        <div class="b-slider-row mt-1" style="margin-bottom:8px;"><button id="btn-add-text" style="width:100%; padding:8px; border-radius:10px; border:1px solid #ccc; background:#fff; cursor:pointer;" onclick="AudioEngine.playClick()">+ Add Text Layer</button></div>
                         <div class="bento-pills">
                             <label class="fx-pill">Typewriter</label>
                             <label class="fx-pill">Bounce Drop</label>
@@ -751,15 +760,17 @@ document.addEventListener("DOMContentLoaded", () => {
                         <div class="th-left">
                             <span class="th-title">TIMELINE</span>
                             <div class="timeline-tools">
-                                <button title="Selection Tool (V)">🖱️</button>
-                                <button title="Razor Cut (C)">✂️</button>
-                                <button title="Ripple Edit (B)">↔</button>
-                                <button title="Snap to edges (S)">🧲</button>
-                                <button title="Add Marker (M)">📍</button>
+                                <button title="Selection Tool (V)" id="btn-tl-select">🖱️</button>
+                                <button title="Razor Cut (C)" id="btn-tl-razor">✂️</button>
+                                <button title="Delete Clip" id="btn-tl-delete">🗑️</button>
+                                <button title="Toggle Snap (S)" id="btn-tl-snap">🧲</button>
+                                <button title="Add Marker (M)" id="btn-tl-marker">📍</button>
+                                <button title="Copy Clip" id="btn-copy-clip">⎘</button>
+                                <button title="Paste Clip" id="btn-paste-clip">⎙</button>
                             </div>
                         </div>
                         <div class="th-tools">
-                            <input type="range" class="tl-zoom" title="Zoom Timeline" min="1" max="100" value="50">
+                            <input type="range" id="tl-zoom" class="tl-zoom" title="Zoom Timeline" min="10" max="200" value="60">
                             <span class="audio-meter"><div class="meter-bar"><div class="meter-fill" id="meter-l"></div></div><div class="meter-bar"><div class="meter-fill" id="meter-r"></div></div></span>
                         </div>
                     </div>
@@ -1269,17 +1280,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 <span class="au-badge">SFX</span>
             </div>
 
-            <!-- The Yellow Player -->
+            <!-- Audio Player -->
             <div class="au-player">
                 <div class="au-player-display" id="au-wave-screen">
                     <canvas id="audio-canvas" width="400" height="150" style="width:100%; height:100%;"></canvas>
+                    <div id="audio-playhead" class="audio-playhead"></div>
                 </div>
-                <input type="range" class="au-slider" id="au-seek" value="0">
+                <input type="range" class="au-slider" id="au-seek" min="0" max="100" value="0">
                 <div class="au-player-ctrls">
-                    <button style="background:none; border:none; color:#f7a600; cursor:pointer; font-size:16px;">⏪</button>
+                    <button type="button" class="audio-skip" data-dir="-1" style="background:none; border:none; color:#f7a600; cursor:pointer; font-size:16px;">⏪</button>
                     <button class="play-btn" id="audio-play-btn" style="background:none; border:none; color:#f7a600; cursor:pointer; font-size:18px;">▶</button>
-                    <button style="background:none; border:none; color:#f7a600; cursor:pointer; font-size:16px;">⏩</button>
+                    <button type="button" class="audio-skip" data-dir="1" style="background:none; border:none; color:#f7a600; cursor:pointer; font-size:16px;">⏩</button>
                 </div>
+                <div class="audio-timeline-row" id="audio-timeline-grid"></div>
+                <div class="audio-time-row"><span id="audio-time">00:00:00</span></div>
             </div>
 
             <!-- Years Active / Stats -->
@@ -1292,7 +1306,26 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
             <input type="range" class="au-slider" id="audio-vol" min="0" max="150" value="80" style="margin-top:10px;">
 
-            <!-- Media Circular list -->
+            <div class="au-media-library">
+                <div class="au-media-header">AUDIO LIBRARY</div>
+                <div class="audio-library" id="audio-library"></div>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <div style="flex:1; background:rgba(255,255,255,0.04); padding:12px; border-radius:14px; display:flex; flex-direction:column; gap:8px;">
+                    <span style="font-size:11px; color:#aaa; letter-spacing:0.08em;">LEFT METER</span>
+                    <div style="background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; height:10px;">
+                        <div id="master-l" style="width:45%; height:100%; background:#f7a600;"></div>
+                    </div>
+                </div>
+                <div style="flex:1; background:rgba(255,255,255,0.04); padding:12px; border-radius:14px; display:flex; flex-direction:column; gap:8px;">
+                    <span style="font-size:11px; color:#aaa; letter-spacing:0.08em;">RIGHT METER</span>
+                    <div style="background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; height:10px;">
+                        <div id="master-r" style="width:45%; height:100%; background:#f7a600;"></div>
+                    </div>
+                </div>
+            </div>
+
             <div class="au-media">
                 <div class="au-m-header">
                     <span>Export Audio</span>
@@ -1675,6 +1708,13 @@ document.addEventListener("DOMContentLoaded", () => {
    PRO VIDEO EDITOR CLASS
    ==================================================================== */
 function initVideoEditor() {
+    // Prefer advanced editor from video-engine.js when available.
+    if (window.ProVideoEditorAdvanced) {
+        if (window.currentVideoEditor?.cleanup) window.currentVideoEditor.cleanup();
+        window.currentVideoEditor = new window.ProVideoEditorAdvanced();
+        return;
+    }
+    // Fallback to legacy editor in this file.
     window.currentVideoEditor = new ProVideoEditor();
 }
 
@@ -1689,10 +1729,14 @@ class ProVideoEditor {
         this.isMuted = false;
         this.scale = 60; // timeline px per sec
 
-        this.canvas     = document.getElementById('composer-canvas');
+        this.canvas = document.getElementById('composer-canvas');
         if (!this.canvas) return;
-        this.ctx        = this.canvas.getContext('2d');
+        this.ctx = this.canvas.getContext('2d');
         this.libraryDiv = document.getElementById('media-library');
+
+        // Audio Context for sync & export
+        this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        this.audioDest = this.audioCtx.createMediaStreamDestination();
 
         this.visualTrack = document.getElementById('visual-track');
         this.audioTrack  = document.getElementById('audio-track');
@@ -1704,42 +1748,50 @@ class ProVideoEditor {
         this.playBtn     = document.getElementById('play-pause-btn');
         this.uploadInput = document.getElementById('media-upload');
         this.timelineContainer = document.getElementById('timeline-container');
+        this.markerContainer = null;
+        this.clipClipboard = null;
+        this.snapEnabled = true;
+        this.markers = [];
         
         this.meterL = document.getElementById('meter-l');
         this.meterR = document.getElementById('meter-r');
 
         this.bindEvents();
         this.renderLoop();
-        this.loadTemplates();
-    }
-
-    loadTemplates() {
-        // Feed UI with templates
-        const t1 = document.createElement('div');
-        t1.className = 'media-item video-thumb';
-        t1.innerHTML = '<video src="assets/result_0.mp4" muted loop></video><span>Intro.mp4</span>';
-        t1.onclick = () => this.addToTimeline({ type: 'video', isMock: false, url: 'assets/result_0.mp4', duration: 4, name: 'Intro.mp4' });
-        
-        const t2 = document.createElement('div');
-        t2.className = 'media-item img-thumb';
-        t2.innerHTML = '<img src="assets/home.png"><span>B-Roll.png</span>';
-        t2.onclick = () => this.addToTimeline({ type: 'image', isMock: false, url: 'assets/home.png', duration: 5, name: 'B-Roll.png' });
-
-        this.libraryDiv.innerHTML = '';
-        this.libraryDiv.appendChild(t1);
-        this.libraryDiv.appendChild(t2);
     }
 
     bindEvents() {
-        if(this.uploadInput) this.uploadInput.addEventListener('change', (e) => this.handleUpload(e));
-        if(this.playBtn)     this.playBtn.addEventListener('click', () => this.togglePlayback());
+        if(this.uploadInput) {
+            this.uploadInput.addEventListener('change', (e) => this.handleUpload(e));
+        }
+        
+        if (this.libraryDiv) {
+            this.libraryDiv.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                this.libraryDiv.style.border = '2px dashed #1db954';
+            });
+            this.libraryDiv.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                this.libraryDiv.style.border = '';
+            });
+            this.libraryDiv.addEventListener('drop', (e) => {
+                e.preventDefault();
+                this.libraryDiv.style.border = '';
+                if (e.dataTransfer.files.length > 0) {
+                    this.handleUpload({ target: { files: e.dataTransfer.files } });
+                }
+            });
+        }
+        if(this.playBtn) {
+            this.playBtn.addEventListener('click', () => this.togglePlayback());
+        }
 
         if (this.seekBar) {
             this.seekBar.addEventListener('mousedown', (e) => this.startScrub(e));
         }
         if (this.timelineContainer) {
             this.timelineContainer.addEventListener('mousedown', (e) => {
-                if (e.target.classList.contains('pro-track') || e.target.classList.contains('t-divider-grid')) {
+                if (e.target.classList.contains('pro-track') || e.target.classList.contains('t-divider-grid') || e.target.id === 'timeline-container' || e.target.classList.contains('pro-clip-segment')) {
                     this.startScrub(e);
                 }
             });
@@ -1763,7 +1815,7 @@ class ProVideoEditor {
                  el.addEventListener('input', (e) => {
                      const val = e.target.value;
                      const displayEl = document.getElementById(b.id.replace('adj-', 'val-')) || el.nextElementSibling;
-                     if(displayEl) displayEl.innerText = val + b.unit;
+                     if(displayEl && displayEl.tagName === 'SPAN') displayEl.innerText = val + b.unit;
                      if (this.selectedClipId) {
                          const clip = this.clips.find(c => c.id === this.selectedClipId);
                          if (clip) { clip.filters[b.prop] = parseFloat(val); this.drawFrame(); }
@@ -1785,22 +1837,145 @@ class ProVideoEditor {
             }
         });
 
-        // Accordion headers
-        document.querySelectorAll('.acc-header').forEach(h => {
-             h.addEventListener('click', () => h.parentElement.classList.toggle('open'));
+        // Keyboard shortcuts
+        document.addEventListener('keydown', this.handleKeyDown.bind(this));
+        
+        // Ensure AudioContext starts
+        document.addEventListener('click', () => {
+            if (this.audioCtx && this.audioCtx.state === 'suspended') {
+                this.audioCtx.resume();
+            }
+        }, { once: true });
+
+        // Extra UI bindings
+        const bindsExtra = [
+            { id: 'adj-pos', prop: 'pos', unit: '' },
+            { id: 'adj-rot', prop: 'rotation', unit: '°' },
+            { id: 'adj-spd', prop: 'speed', unit: '%' }
+        ];
+
+        bindsExtra.forEach(b => {
+             const el = document.getElementById(b.id);
+             if(el) {
+                 el.addEventListener('input', (e) => {
+                     const val = e.target.value;
+                     if (this.selectedClipId) {
+                         const clip = this.clips.find(c => c.id === this.selectedClipId);
+                         if (clip) { 
+                             if(b.prop === 'pos') {
+                                clip.filters.x = (val - 50) * 10; // -500 to 500
+                             } else if (b.prop === 'speed') {
+                                clip.filters.speed = val / 100;
+                                if(clip.mediaEl && clip.item.type !== 'image' && clip.item.type !== 'text') {
+                                    clip.mediaEl.playbackRate = clip.filters.speed;
+                                }
+                             } else {
+                                clip.filters[b.prop] = parseFloat(val); 
+                             }
+                             this.drawFrame(); 
+                         }
+                     }
+                 });
+             }
         });
 
-        // Keyboard
-        document.addEventListener('keydown', (e) => {
-            if (!document.getElementById('tool-overlay').classList.contains('active')) return;
-            if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
-                e.preventDefault();
-                this.togglePlayback();
-            }
-            if ((e.code === 'Backspace' || e.code === 'Delete') && this.selectedClipId) {
-                this.deleteClip();
-            }
+        // Dissolve
+        const fxDissolve = document.getElementById('fx-dissolve');
+        if(fxDissolve) {
+            fxDissolve.addEventListener('change', (e) => {
+                if(this.selectedClipId) {
+                    const clip = this.clips.find(c => c.id === this.selectedClipId);
+                    if(clip) { clip.effects.dissolve = e.target.checked; this.drawFrame(); }
+                }
+            });
+        }
+
+        // Add Text Layer
+        const btnAddText = document.getElementById('btn-add-text');
+        if(btnAddText) {
+            btnAddText.addEventListener('click', () => {
+                const textStr = prompt("Enter text for overlay:", "SUPER BOLD TITLE");
+                if(textStr) {
+                    const item = { id: Date.now() + Math.random(), type: 'text', name: 'Text Layer', text: textStr, origDuration: 5 };
+                    this.addToTimeline(item);
+                }
+            });
+        }
+
+        // Remove Background
+        const btnRemoveBg = document.getElementById('btn-remove-bg');
+        if(btnRemoveBg) {
+            btnRemoveBg.addEventListener('click', () => {
+                if(this.selectedClipId) {
+                    const clip = this.clips.find(c => c.id === this.selectedClipId);
+                    if(clip && clip.isVisual) {
+                        clip.effects.removeBg = !clip.effects.removeBg;
+                        btnRemoveBg.style.background = clip.effects.removeBg ? '#1db954' : '';
+                        this.drawFrame();
+                    }
+                }
+            });
+        }
+
+        // Timeline Zoom
+        const tlZoom = document.getElementById('tl-zoom');
+        if(tlZoom) {
+            tlZoom.addEventListener('input', (e) => {
+                this.scale = parseInt(e.target.value);
+                this.renderTimeline();
+            });
+        }
+
+        // Timeline tools
+        const btnRazor = document.getElementById('btn-tl-razor');
+        if(btnRazor) btnRazor.addEventListener('click', () => this.splitClip());
+        
+        const btnDel = document.getElementById('btn-tl-delete');
+        if(btnDel) btnDel.addEventListener('click', () => this.deleteClip());
+
+        const snapBtn = document.getElementById('btn-tl-snap');
+        if(snapBtn) snapBtn.addEventListener('click', () => {
+            this.snapEnabled = !this.snapEnabled;
+            snapBtn.classList.toggle('active', this.snapEnabled);
         });
+
+        const btnMarker = document.getElementById('btn-tl-marker');
+        if(btnMarker) btnMarker.addEventListener('click', () => this.addMarker());
+
+        const btnCopy = document.getElementById('btn-copy-clip');
+        if(btnCopy) btnCopy.addEventListener('click', () => this.copyClip());
+
+        const btnPaste = document.getElementById('btn-paste-clip');
+        if(btnPaste) btnPaste.addEventListener('click', () => this.pasteClip());
+        
+        // Left Nav Tools mapping
+        const navBtns = document.querySelectorAll('.bento-left-bar .nav-icons button');
+        navBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                navBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                if(btn.title.includes('Razor Cut')) { this.splitClip(); }
+                if(btn.title.includes('Media Bin')) { document.getElementById('media-upload').click(); }
+                if(btn.title.includes('Text')) { if(btnAddText) btnAddText.click(); }
+            });
+        });
+    }
+
+    handleKeyDown(e) {
+        if (!document.getElementById('tool-overlay').classList.contains('active')) return;
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        
+        if (e.code === 'Space') {
+            e.preventDefault();
+            this.togglePlayback();
+        }
+        if ((e.code === 'Backspace' || e.code === 'Delete') && this.selectedClipId) {
+            this.deleteClip();
+        }
+        // Split clip at playhead
+        if (e.code === 'KeyC') {
+            this.splitClip();
+        }
     }
 
     startScrub(e) {
@@ -1810,7 +1985,7 @@ class ProVideoEditor {
         
         const update = (ev) => {
             const x = ev.clientX - rect.left + this.timelineContainer.scrollLeft;
-            this.seek((x / (this.duration * sc)) * 100);
+            this.seek((x / sc));
         };
         update(e);
 
@@ -1822,39 +1997,73 @@ class ProVideoEditor {
         document.addEventListener('mouseup', onUp);
     }
 
-    handleUpload(e) {
+    async handleUpload(e) {
         const files = Array.from(e.target.files);
         let emptyMsg = this.libraryDiv.querySelector('.media-empty');
         if (emptyMsg) emptyMsg.remove();
         
-        files.forEach(file => {
-            const url  = URL.createObjectURL(file);
+        for (let file of files) {
+            const url = URL.createObjectURL(file);
             const type = file.type.split('/')[0];
-            const item = { id: Date.now() + Math.random(), file, url, type, name: file.name, isMock: false };
+            const item = { id: Date.now() + Math.random(), file, url, type, name: file.name, thumb: null, origDuration: 0 };
             
-            if (type === 'video' || type === 'audio') {
-                const media = document.createElement(type);
-                media.src = url;
-                media.onloadedmetadata = () => { 
-                    item.duration = media.duration; 
-                    this.library.push(item); 
-                    this.renderLib(item); 
-                };
+            if (type === 'video') {
+                await this.generateVideoThumbnail(item);
+                this.library.push(item);
+                this.renderLib(item);
+            } else if (type === 'audio') {
+                const audio = document.createElement('audio');
+                audio.src = url;
+                await new Promise(r => {
+                    audio.onloadedmetadata = () => {
+                        item.origDuration = audio.duration;
+                        r();
+                    };
+                });
+                this.library.push(item);
+                this.renderLib(item);
             } else if (type === 'image') {
-                item.duration = 5;
+                item.origDuration = 5;
                 this.library.push(item);
                 this.renderLib(item);
             }
+        }
+    }
+
+    generateVideoThumbnail(item) {
+        return new Promise((resolve) => {
+            const video = document.createElement('video');
+            video.src = item.url;
+            video.muted = true;
+            video.crossOrigin = "anonymous";
+            video.currentTime = 1; // get frame at 1s
+            video.onloadedmetadata = () => {
+                item.origDuration = video.duration;
+            };
+            video.onseeked = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = 160;
+                canvas.height = 90;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                item.thumb = canvas.toDataURL('image/jpeg');
+                resolve();
+            };
+            video.onerror = resolve; // fallback
         });
     }
 
     renderLib(item) {
         const el = document.createElement('div');
         el.className = 'media-item';
-        // Give varying thumbnails logic
-        if (item.type === 'video')      el.innerHTML = `<video src="${item.url}" muted></video><span>${item.name}</span>`;
-        else if (item.type === 'image') el.innerHTML = `<img src="${item.url}"><span>${item.name}</span>`;
-        else                            el.innerHTML = `<span class="aud-icon">🔊</span><span>${item.name}</span>`;
+        
+        if (item.type === 'video') {
+            el.innerHTML = `<img src="${item.thumb}" style="width:100%; height:100%; object-fit:cover;"><span>${item.name}</span>`;
+        } else if (item.type === 'image') {
+            el.innerHTML = `<img src="${item.url}" style="width:100%; height:100%; object-fit:cover;"><span>${item.name}</span>`;
+        } else {
+            el.innerHTML = `<span class="aud-icon" style="font-size:24px; text-align:center; display:block; padding-top:10px;">🔊</span><span>${item.name}</span>`;
+        }
         
         el.addEventListener('click', () => this.addToTimeline(item));
         this.libraryDiv.appendChild(el);
@@ -1863,30 +2072,39 @@ class ProVideoEditor {
     addToTimeline(item) {
         const isVisual = item.type === 'video' || item.type === 'image';
         let track = isVisual ? 'v1' : 'a1';
-        let startAt = 0;
+        let startAt = this.currentTime; // insert at playhead
         
-        this.clips.filter(c => c.track === track).forEach(c => {
-            if (c.startAt + c.duration > startAt) startAt = c.startAt + c.duration;
-        });
-
         let mediaEl = null;
-        if (!item.isMock) {
-            if (item.type === 'video' || item.type === 'audio') {
-                mediaEl = document.createElement(item.type);
-                mediaEl.crossOrigin = "anonymous";
-                mediaEl.src = item.url;
-                mediaEl.preload = 'auto';
-            } else if (item.type === 'image') {
-                mediaEl = new Image();
-                mediaEl.crossOrigin = "anonymous";
-                mediaEl.src = item.url;
+        let audioNode = null;
+        
+        if (item.type === 'text') {
+            // Text has no media element
+        } else if (item.type === 'video' || item.type === 'audio') {
+            mediaEl = document.createElement(item.type);
+            mediaEl.crossOrigin = "anonymous";
+            mediaEl.src = item.url;
+            mediaEl.preload = 'auto';
+            if (item.type === 'video') mediaEl.muted = true; // Video tracks don't play audio directly out
+            
+            if (this.audioCtx && !mediaEl.muted) {
+                try {
+                    audioNode = this.audioCtx.createMediaElementSource(mediaEl);
+                    audioNode.connect(this.audioCtx.destination);
+                    audioNode.connect(this.audioDest);
+                } catch(e) { console.error("Audio node error", e); }
             }
+        } else if (item.type === 'image') {
+            mediaEl = new Image();
+            mediaEl.crossOrigin = "anonymous";
+            mediaEl.src = item.url;
         }
 
         const clip = { 
-            id: Date.now().toString() + Math.random(), item, mediaEl, isVisual, startAt, duration: item.duration, track,
+            id: Date.now().toString() + Math.random(),
+            item, mediaEl, audioNode, isVisual,
+            startAt, duration: item.origDuration, trimStart: 0, track,
             color: isVisual ? '#2a69d1' : '#1db954',
-            filters: { brightness: 0, contrast: 100, saturation: 100, volume: 100, scale: 100, opacity: 100 },
+            filters: { brightness: 0, contrast: 100, saturation: 100, volume: 100, scale: 100, opacity: 100, x: 0, y: 0, rotation: 0, speed: 1 },
             effects: { blur: false, glow: false, vhs: false, grain: false }
         };
         this.clips.push(clip);
@@ -1895,14 +2113,148 @@ class ProVideoEditor {
         this.renderTimeline();
     }
 
-    renderTimeline() {
-        if(this.visualTrack) this.visualTrack.innerHTML = '';
-        if(this.v2Track) this.v2Track.innerHTML = '';
-        if(this.v3Track) this.v3Track.innerHTML = '';
-        if(this.audioTrack) this.audioTrack.innerHTML = '';
+    splitClip() {
+        if (!this.selectedClipId) return;
+        const clipIndex = this.clips.findIndex(c => c.id === this.selectedClipId);
+        if (clipIndex === -1) return;
+        const c = this.clips[clipIndex];
+        
+        if (this.currentTime > c.startAt && this.currentTime < c.startAt + c.duration) {
+            const splitAt = this.snapEnabled ? Math.round((this.currentTime - c.startAt) * 10) / 10 : this.currentTime - c.startAt;
+            const newDuration1 = splitAt;
+            const newDuration2 = c.duration - newDuration1;
+            const newTrimStart = c.trimStart + newDuration1;
+            
+            c.duration = newDuration1;
+            
+            let newMediaEl = null;
+            let newAudioNode = null;
+            if (c.item.type === 'video' || c.item.type === 'audio') {
+                newMediaEl = document.createElement(c.item.type);
+                newMediaEl.crossOrigin = "anonymous";
+                newMediaEl.src = c.item.url;
+                newMediaEl.preload = 'auto';
+                if (c.item.type === 'video') newMediaEl.muted = true;
+                
+                try {
+                    if (this.audioCtx && !newMediaEl.muted) {
+                        newAudioNode = this.audioCtx.createMediaElementSource(newMediaEl);
+                        newAudioNode.connect(this.audioCtx.destination);
+                        newAudioNode.connect(this.audioDest);
+                    }
+                } catch(e) {}
+            } else if (c.item.type === 'image') {
+                newMediaEl = new Image();
+                newMediaEl.crossOrigin = "anonymous";
+                newMediaEl.src = c.item.url;
+            }
 
-        if(this.timelineContainer) this.timelineContainer.style.width = (this.duration * this.scale) + 'px';
-        if(this.seekBar) this.seekBar.style.width = (this.duration * this.scale) + 'px';
+            const c2 = {
+                id: Date.now().toString() + Math.random(),
+                item: c.item, mediaEl: newMediaEl, audioNode: newAudioNode, isVisual: c.isVisual,
+                startAt: this.currentTime, duration: newDuration2, trimStart: newTrimStart, track: c.track,
+                color: c.color,
+                filters: JSON.parse(JSON.stringify(c.filters)),
+                effects: JSON.parse(JSON.stringify(c.effects))
+            };
+            
+            this.clips.push(c2);
+            this.renderTimeline();
+        }
+    }
+
+    addMarker() {
+        const time = this.snapEnabled ? Math.round(this.currentTime * 10) / 10 : this.currentTime;
+        this.markers.push({ id: 'm' + Date.now() + Math.random(), time });
+        this.renderTimeline();
+    }
+
+    copyClip() {
+        if (!this.selectedClipId) return;
+        const clip = this.clips.find(c => c.id === this.selectedClipId);
+        if (!clip) return;
+        this.clipClipboard = JSON.parse(JSON.stringify({
+            item: clip.item,
+            track: clip.track,
+            duration: clip.duration,
+            filters: clip.filters,
+            effects: clip.effects,
+            trimStart: clip.trimStart,
+            color: clip.color,
+            isVisual: clip.isVisual
+        }));
+    }
+
+    pasteClip() {
+        if (!this.clipClipboard) return;
+        const data = this.clipClipboard;
+        const offset = this.snapEnabled ? Math.round(this.currentTime * 10) / 10 : this.currentTime;
+        let mediaEl = null;
+        let audioNode = null;
+
+        if (data.item.type === 'video' || data.item.type === 'audio') {
+            mediaEl = document.createElement(data.item.type);
+            mediaEl.crossOrigin = "anonymous";
+            mediaEl.src = data.item.url;
+            mediaEl.preload = 'auto';
+            if (data.item.type === 'video') mediaEl.muted = true;
+            try {
+                if (this.audioCtx && !mediaEl.muted) {
+                    audioNode = this.audioCtx.createMediaElementSource(mediaEl);
+                    audioNode.connect(this.audioCtx.destination);
+                    audioNode.connect(this.audioDest);
+                }
+            } catch(e) {}
+        } else if (data.item.type === 'image') {
+            mediaEl = new Image();
+            mediaEl.crossOrigin = "anonymous";
+            mediaEl.src = data.item.url;
+        }
+
+        const clip = {
+            id: Date.now().toString() + Math.random(),
+            item: data.item, mediaEl, audioNode, isVisual: data.isVisual,
+            startAt: offset, duration: data.duration, trimStart: data.trimStart, track: data.track,
+            color: data.color,
+            filters: JSON.parse(JSON.stringify(data.filters)),
+            effects: JSON.parse(JSON.stringify(data.effects))
+        };
+        this.clips.push(clip);
+        if (offset + clip.duration > this.duration - 2) this.duration = offset + clip.duration + 5;
+        this.renderTimeline();
+    }
+
+    renderMarkers() {
+        if (!this.timelineContainer) return;
+        if (!this.markerContainer) {
+            this.markerContainer = document.createElement('div');
+            this.markerContainer.className = 'timeline-marker-layer';
+            this.timelineContainer.appendChild(this.markerContainer);
+        }
+        this.markerContainer.innerHTML = '';
+        this.markers.forEach(marker => {
+            const mark = document.createElement('div');
+            mark.className = 'timeline-marker';
+            mark.style.left = (marker.time * this.scale) + 'px';
+            mark.title = `Marker @ ${this.fmtTime(marker.time)}`;
+            mark.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.seek(marker.time);
+            });
+            this.markerContainer.appendChild(mark);
+        });
+    }
+
+    renderTimeline() {
+        if(this.visualTrack) this.visualTrack.innerHTML = '<div class="tr-label">V1</div>';
+        if(this.v2Track) this.v2Track.innerHTML = '<div class="tr-label">V2</div>';
+        if(this.v3Track) this.v3Track.innerHTML = '<div class="tr-label">V3</div>';
+        if(this.audioTrack) this.audioTrack.innerHTML = '<div class="tr-label">A1</div>';
+
+        if(this.timelineContainer) this.timelineContainer.style.width = Math.max(800, this.duration * this.scale) + 'px';
+        if(this.seekBar) this.seekBar.style.width = Math.max(800, this.duration * this.scale) + 'px';
+
+        this.renderMarkers();
 
         this.clips.forEach(clip => {
             const el = document.createElement('div');
@@ -1915,14 +2267,38 @@ class ProVideoEditor {
             el.onmousedown = (e) => {
                 e.stopPropagation();
                 this.selectClip(clip.id);
-                // Simple drag implementation
+                
+                const isLeftEdge = e.target.classList.contains('clip-trim-l');
+                const isRightEdge = e.target.classList.contains('clip-trim-r');
+                
                 let sX = e.clientX;
-                let sL = clip.startAt;
+                let sStartAt = clip.startAt;
+                let sDuration = clip.duration;
+                let sTrimStart = clip.trimStart;
                 
                 const onMve = (ev) => {
-                    let dx = ev.clientX - sX;
-                    clip.startAt = Math.max(0, sL + (dx / this.scale));
+                    let dx = (ev.clientX - sX) / this.scale;
+                    if (isLeftEdge) {
+                        let newStart = Math.max(0, sStartAt + dx);
+                        let diff = newStart - sStartAt;
+                        if (sDuration - diff > 0.5 && sTrimStart + diff >= 0) {
+                            clip.startAt = newStart;
+                            clip.duration = sDuration - diff;
+                            clip.trimStart = sTrimStart + diff;
+                        }
+                    } else if (isRightEdge) {
+                        let newDur = Math.max(0.5, sDuration + dx);
+                        if (this.snapEnabled) newDur = Math.round(newDur * 10) / 10;
+                        if (clip.trimStart + newDur <= clip.item.origDuration || clip.item.type === 'image') {
+                            clip.duration = newDur;
+                        }
+                    } else {
+                        let newStart = Math.max(0, sStartAt + dx);
+                        if (this.snapEnabled) newStart = Math.round(newStart * 10) / 10;
+                        clip.startAt = newStart;
+                    }
                     el.style.left = (clip.startAt * this.scale) + 'px';
+                    el.style.width = (clip.duration * this.scale) + 'px';
                     if (!this.isPlaying) this.drawFrame();
                 };
                 const onUp = () => { document.removeEventListener('mousemove', onMve); document.removeEventListener('mouseup', onUp); };
@@ -1944,22 +2320,35 @@ class ProVideoEditor {
         if(c) {
             const upd = (idStr, val) => { const el = document.getElementById(idStr); if(el) el.value = val; };
             const updT = (idStr, val) => { const el = document.getElementById(idStr); if(el) el.innerText = val; };
-            upd('adj-bright', c.filters.brightness); updT('val-bright', c.filters.brightness);
-            upd('adj-contrast', c.filters.contrast); updT('val-contrast', c.filters.contrast+'%');
-            upd('adj-sat', c.filters.saturation);    updT('val-sat', c.filters.saturation+'%');
-            upd('adj-scale', c.filters.scale);       updT('val-scale', c.filters.scale+'%');
-            upd('adj-opac', c.filters.opacity);      updT('val-opac', c.filters.opacity+'%');
+            upd('adj-bright', c.filters.brightness); 
+            upd('adj-contrast', c.filters.contrast); 
+            upd('adj-sat', c.filters.saturation);    
+            upd('adj-scale', c.filters.scale);       
+            upd('adj-opac', c.filters.opacity);      
+            upd('adj-pos', (c.filters.x / 10) + 50);
+            upd('adj-rot', c.filters.rotation);
+            upd('adj-spd', c.filters.speed * 100);
             
             const fxChk = (idStr, val) => { const el = document.getElementById(idStr); if(el) el.checked = val; };
             fxChk('fx-blur', c.effects.blur);
             fxChk('fx-glow', c.effects.glow);
             fxChk('fx-vhs', c.effects.vhs);
             fxChk('fx-grain', c.effects.grain);
+            fxChk('fx-dissolve', c.effects.dissolve);
+            
+            const btnRemoveBg = document.getElementById('btn-remove-bg');
+            if(btnRemoveBg) btnRemoveBg.style.background = c.effects.removeBg ? '#1db954' : '';
         }
     }
 
     deleteClip() {
         if(!this.selectedClipId) return;
+        const clip = this.clips.find(c => c.id === this.selectedClipId);
+        if (clip && clip.mediaEl && typeof clip.mediaEl.pause === 'function') {
+            clip.mediaEl.pause();
+            clip.mediaEl.removeAttribute('src');
+            clip.mediaEl.load();
+        }
         this.clips = this.clips.filter(c => c.id !== this.selectedClipId);
         this.selectedClipId = null;
         this.renderTimeline();
@@ -1970,6 +2359,8 @@ class ProVideoEditor {
         this.isPlaying = !this.isPlaying;
         if(this.playBtn) this.playBtn.innerHTML = this.isPlaying ? '⏸' : '▶';
         this.lastTime = performance.now();
+        if(this.audioCtx && this.audioCtx.state === 'suspended') this.audioCtx.resume();
+        
         if(!this.isPlaying) {
             this.clips.forEach(clip => { if (clip.mediaEl && typeof clip.mediaEl.pause === 'function') clip.mediaEl.pause(); });
             if(this.meterL) this.meterL.style.height = '0%';
@@ -1977,13 +2368,14 @@ class ProVideoEditor {
         }
     }
 
-    seek(percent) {
-        let p = Math.max(0, Math.min(100, percent));
-        this.currentTime = (p / 100) * this.duration;
+    seek(timeSeconds) {
+        let t = Math.max(0, timeSeconds);
+        this.currentTime = t;
         this.clips.forEach(clip => {
             if (clip.mediaEl && typeof clip.mediaEl.currentTime !== 'undefined') {
-                if (this.currentTime >= clip.startAt && this.currentTime <= clip.startAt + clip.duration)
-                    clip.mediaEl.currentTime = this.currentTime - clip.startAt;
+                if (this.currentTime >= clip.startAt && this.currentTime <= clip.startAt + clip.duration) {
+                    clip.mediaEl.currentTime = clip.trimStart + (this.currentTime - clip.startAt);
+                }
             }
         });
         if (!this.isPlaying) this.drawFrame();
@@ -2002,13 +2394,31 @@ class ProVideoEditor {
             this.lastTime = now;
             if (this.currentTime >= this.duration) { this.currentTime = 0; this.togglePlayback(); }
             
+            // Sync media times
+            this.clips.forEach(clip => {
+                if (clip.mediaEl && typeof clip.mediaEl.currentTime !== 'undefined') {
+                    if (this.currentTime >= clip.startAt && this.currentTime <= clip.startAt + clip.duration) {
+                        if (clip.mediaEl.paused) {
+                            clip.mediaEl.currentTime = clip.trimStart + (this.currentTime - clip.startAt);
+                            clip.mediaEl.play().catch(()=>{});
+                        }
+                        // Check if drift is too large
+                        const expectedTime = clip.trimStart + (this.currentTime - clip.startAt);
+                        if (Math.abs(clip.mediaEl.currentTime - expectedTime) > 0.2) {
+                            clip.mediaEl.currentTime = expectedTime;
+                        }
+                    } else {
+                        if (!clip.mediaEl.paused) clip.mediaEl.pause();
+                    }
+                }
+            });
+            
             // Audio Meters Mockup
             const audioClip = this.clips.find(c => !c.isVisual && this.currentTime >= c.startAt && this.currentTime <= c.startAt + c.duration);
             if(audioClip && this.meterL && this.meterR) {
                 const vol = 40 + Math.random() * 50;
                 this.meterL.style.height = `${vol}%`;
                 this.meterR.style.height = `${vol - (Math.random()*10)}%`;
-                if (audioClip.mediaEl && audioClip.mediaEl.paused) audioClip.mediaEl.play().catch(e=>{});
             } else if(this.meterL && this.meterR) {
                 this.meterL.style.height = '5%';
                 this.meterR.style.height = '5%';
@@ -2027,17 +2437,10 @@ class ProVideoEditor {
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
         const activeClips = this.clips.filter(c => c.isVisual && this.currentTime >= c.startAt && this.currentTime <= c.startAt + c.duration);
-        activeClips.sort((a,b) => a.track.localeCompare(b.track));
+        activeClips.sort((a,b) => a.track.localeCompare(b.track)); // v1, v2, v3
 
         activeClips.forEach(c => {
-            const timeInClip = this.currentTime - c.startAt;
-            
-            if (!c.isMock && c.mediaEl) {
-                if (c.item.type === 'video') {
-                    if (this.isPlaying && c.mediaEl.paused) c.mediaEl.play().catch(e=>{});
-                    else if (!this.isPlaying) { c.mediaEl.pause(); c.mediaEl.currentTime = timeInClip; }
-                }
-                
+            if (c.mediaEl) {
                 const br = 100 + parseFloat(c.filters.brightness || 0)*50;
                 let filterStr = `brightness(${br}%) contrast(${c.filters.contrast}%) saturate(${c.filters.saturation}%)`;
                 if (c.effects.blur) filterStr += ' blur(12px)';
@@ -2046,7 +2449,18 @@ class ProVideoEditor {
                 this.ctx.globalAlpha = (c.filters.opacity !== undefined ? c.filters.opacity : 100) / 100;
                 const sc = (c.filters.scale !== undefined ? c.filters.scale : 100) / 100;
                 
-                if (c.item.type === 'video' || (c.item.type === 'image' && c.mediaEl.complete)) {
+                if (c.item.type === 'text') {
+                    this.ctx.save();
+                    this.ctx.translate(this.canvas.width/2 + c.filters.x, this.canvas.height/2 + c.filters.y);
+                    this.ctx.rotate(c.filters.rotation * Math.PI / 180);
+                    if (c.effects.glow) { this.ctx.shadowBlur = 40; this.ctx.shadowColor = c.color; }
+                    this.ctx.fillStyle = '#ffffff';
+                    this.ctx.font = `bold ${80 * sc}px 'Inter', sans-serif`;
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText(c.item.text, 0, 0);
+                    this.ctx.restore();
+                } else if (c.item.type === 'video' || (c.item.type === 'image' && c.mediaEl.complete)) {
                     const vW = c.item.type === 'video' ? c.mediaEl.videoWidth  : c.mediaEl.width;
                     const vH = c.item.type === 'video' ? c.mediaEl.videoHeight : c.mediaEl.height;
                     if (vW && vH) {
@@ -2054,9 +2468,23 @@ class ProVideoEditor {
                         const dW = vW * s, dH = vH * s;
                         this.ctx.save();
                         if (c.effects.glow) { this.ctx.shadowBlur = 60; this.ctx.shadowColor = '#00f0ff'; }
-                        this.ctx.translate(this.canvas.width/2, this.canvas.height/2);
-                        // rotation could be applied here
+                        
+                        this.ctx.translate(this.canvas.width/2 + c.filters.x, this.canvas.height/2 + c.filters.y);
+                        this.ctx.rotate(c.filters.rotation * Math.PI / 180);
+                        
+                        if (c.effects.removeBg) {
+                            this.ctx.globalCompositeOperation = 'screen';
+                        }
+                        if (c.effects.dissolve) {
+                            const edge = 1.0;
+                            const tIn = this.currentTime - c.startAt;
+                            const tOut = (c.startAt + c.duration) - this.currentTime;
+                            if (tIn < edge) this.ctx.globalAlpha *= (tIn / edge);
+                            else if (tOut < edge) this.ctx.globalAlpha *= (tOut / edge);
+                        }
+                        
                         this.ctx.drawImage(c.mediaEl, -dW/2, -dH/2, dW, dH);
+                        this.ctx.globalCompositeOperation = 'source-over';
                         this.ctx.restore();
                     }
                 }
@@ -2065,7 +2493,7 @@ class ProVideoEditor {
             }
         });
         
-        // Static VHS overlay if any clip has VHS
+        // Static VHS overlay
         if(activeClips.some(c => c.effects.vhs)) {
             this.ctx.fillStyle = `rgba(255, 0, 0, ${Math.random()*0.1})`;
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -2075,50 +2503,121 @@ class ProVideoEditor {
             this.ctx.font = '40px Courier New';
             this.ctx.fillText(`SP ${this.fmtTime(this.currentTime)}`, 50, 680);
         }
-
-        this.clips.forEach(c => {
-            if(this.currentTime < c.startAt || this.currentTime > c.startAt + c.duration) {
-                if (c.mediaEl && !c.mediaEl.paused) c.mediaEl.pause();
+        
+        // Film grain overlay
+        if(activeClips.some(c => c.effects.grain)) {
+            const idata = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+            for (let i = 0; i < idata.data.length; i += 4) {
+                const noise = (Math.random() - 0.5) * 40;
+                idata.data[i] += noise;
+                idata.data[i+1] += noise;
+                idata.data[i+2] += noise;
             }
-        });
+            this.ctx.putImageData(idata, 0, 0);
+        }
     }
 
-    exportSequence() {
+    async exportSequence() {
         const btn = document.getElementById('export-video-btn');
-        btn.innerText = 'RENDERING... 23%';
+        const ogContent = btn.innerHTML;
+        btn.innerHTML = '<div style="color:#000; font-weight:bold; width:100%; text-align:center;">RENDERING... <span id="render-pct">0%</span></div>';
         btn.classList.add('rendering');
+        
         this.seek(0);
-        this.togglePlayback();
+        if (this.isPlaying) this.togglePlayback();
         
-        setTimeout(() => btn.innerText = 'RENDERING... 67%', 4000);
-        setTimeout(() => btn.innerText = 'RENDERING... 94%', 8000);
+        // Setup MediaRecorder
+        const canvasStream = this.canvas.captureStream(30);
         
-        setTimeout(() => {
-            this.togglePlayback();
-            btn.innerText = '✅ EXPORT COMPLETE';
-            btn.classList.remove('rendering');
-            btn.style.background = '#1db954';
-            btn.style.color = '#fff';
-            
-            // Dummy download
-            const a=document.createElement('a'); a.href='assets/result_0.mp4'; a.download='Render_Pro.mp4'; a.click();
+        // Combine audio and video streams
+        const tracks = [...canvasStream.getVideoTracks()];
+        if (this.audioDest && this.audioDest.stream.getAudioTracks().length > 0) {
+            tracks.push(...this.audioDest.stream.getAudioTracks());
+        }
+        
+        const stream = new MediaStream(tracks);
+        
+        let options = { mimeType: 'video/webm; codecs=vp9' };
+        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+            options = { mimeType: 'video/webm; codecs=vp8' };
+        }
+        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+            options = { mimeType: 'video/mp4' };
+        }
+        
+        let recorder;
+        try {
+            recorder = new MediaRecorder(stream, options);
+        } catch(e) {
+            recorder = new MediaRecorder(stream); // fallback to default
+        }
 
+        const chunks = [];
+        recorder.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
+        
+        recorder.onstop = () => {
+            const blob = new Blob(chunks, { type: recorder.mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `THE_LAZY_RENDER_${Date.now()}.webm`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            btn.innerHTML = '<div style="color:#fff; font-weight:bold; width:100%; text-align:center; background:#1db954; border-radius:10px; padding:10px;">✅ SUCCESS</div>';
             setTimeout(() => {
-                btn.innerText = '🚀 EXPORT SYSTEM';
-                btn.style.background = '';
-                btn.style.color = '';
+                btn.innerHTML = ogContent;
+                btn.classList.remove('rendering');
             }, 3000);
-        }, 11000);
+        };
+        
+        recorder.start();
+        
+        // Real-time render loop for export
+        const exportFps = 30;
+        const frameTime = 1 / exportFps;
+        
+        if (this.audioCtx && this.audioCtx.state === 'suspended') this.audioCtx.resume();
+        
+        const renderNextFrame = () => {
+            if (this.currentTime >= this.duration) {
+                recorder.stop();
+                this.clips.forEach(c => { if(c.mediaEl && !c.mediaEl.paused) c.mediaEl.pause(); });
+                return;
+            }
+            
+            this.seek(this.currentTime + frameTime);
+            
+            const pct = Math.round((this.currentTime / this.duration) * 100);
+            const pctEl = document.getElementById('render-pct');
+            if (pctEl) pctEl.innerText = `${pct}%`;
+            
+            requestAnimationFrame(renderNextFrame);
+        };
+        
+        renderNextFrame();
     }
 
     cleanup() {
         if (this.animationRef) cancelAnimationFrame(this.animationRef);
         this.isPlaying = false;
-        this.clips.forEach(c => { if(c.mediaEl && typeof c.mediaEl.pause==='function'){ c.mediaEl.pause(); c.mediaEl.src='';} });
+        this.clips.forEach(c => { 
+            if(c.mediaEl) {
+                c.mediaEl.pause();
+                c.mediaEl.removeAttribute('src');
+                c.mediaEl.load();
+            }
+            if(c.audioNode) {
+                c.audioNode.disconnect();
+            }
+        });
         this.library = [];
         this.clips = [];
     }
 }
+
 
 /* ====================================================================
    PRO PHOTO EDITOR CLASS
@@ -2575,14 +3074,21 @@ class ProAudioEditor {
         this.playBtn = document.getElementById('audio-play-btn');
         this.playhead = document.getElementById('audio-playhead');
         this.timeDisplay = document.getElementById('audio-time');
+        this.seekInput = document.getElementById('au-seek');
+        this.exportBtn = document.getElementById('export-click');
+        this.skipButtons = Array.from(document.querySelectorAll('.audio-skip'));
         
         this.meterL = document.getElementById('master-l');
         this.meterR = document.getElementById('master-r');
 
+        this.audio = new Audio();
+        this.currentFile = null;
+        this.currentURL = null;
+
         this.isPlaying = false;
         this.currentTime = 0;
         this.duration = 30; // 30 seconds default
-        this.scale = window.innerWidth * 0.4 / this.duration; // px per second sync roughly to timeline
+        this.scale = Math.max(220, window.innerWidth * 0.25) / this.duration;
         
         this.vol = 0.8;
         this.audioLoaded = false;
@@ -2608,24 +3114,53 @@ class ProAudioEditor {
             this.uploadInput.addEventListener('change', (e) => this.handleUpload(e));
         }
 
-        const renderBtn = document.querySelector('.bento-export');
-        if (renderBtn) renderBtn.addEventListener('click', () => this.exportAudio(renderBtn));
+        if (this.exportBtn) {
+            this.exportBtn.addEventListener('click', () => this.exportAudio(this.exportBtn));
+        }
 
         if (this.playBtn) {
             this.playBtn.addEventListener('click', () => this.togglePlayback());
         }
 
-        const aiBtn = document.querySelector('.ai-btn');
-        const promptInput = document.querySelector('.preview-prompt-bar input');
-        if (aiBtn && promptInput) {
-            aiBtn.addEventListener('click', () => this.runAI(promptInput.value));
-            promptInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') this.runAI(promptInput.value);
+        if (this.seekInput) {
+            this.seekInput.addEventListener('input', (e) => {
+                if (!this.audioLoaded) return;
+                const seekValue = parseFloat(e.target.value) / 100;
+                this.currentTime = Math.max(0, Math.min(this.duration, this.duration * seekValue));
+                if (this.audio && !isNaN(this.currentTime)) {
+                    this.audio.currentTime = this.currentTime;
+                }
+                this.updatePlayhead();
+                this.drawWaveform();
             });
         }
+
+        if (this.skipButtons.length) {
+            this.skipButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const dir = parseInt(btn.dataset.dir, 10) || 0;
+                    if (!this.audioLoaded) return;
+                    this.currentTime = Math.max(0, Math.min(this.duration, this.currentTime + dir * 5));
+                    this.audio.currentTime = this.currentTime;
+                    this.updatePlayhead();
+                    this.drawWaveform();
+                });
+            });
+        }
+
+        const promptVal = document.getElementById('prompt-val');
+        document.querySelectorAll('.au-round-trigger').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const promptText = promptVal ? promptVal.innerText : 'Audio intelligence';
+                this.runAI(promptText);
+            });
+        });
         
         const volSlider = document.getElementById('audio-vol');
-        if(volSlider) volSlider.addEventListener('input', (e) => this.vol = e.target.value / 100);
+        if(volSlider) volSlider.addEventListener('input', (e) => {
+            this.vol = e.target.value / 100;
+            if (this.audio) this.audio.volume = this.vol;
+        });
 
         document.querySelectorAll('.fx-pill').forEach(pill => {
             pill.addEventListener('click', () => {
@@ -2640,44 +3175,112 @@ class ProAudioEditor {
         if(grid) {
             grid.addEventListener('mousedown', (e) => {
                 const rect = grid.getBoundingClientRect();
-                const seekTo = (e.clientX - rect.left) / this.scale;
+                const seekTo = ((e.clientX - rect.left) / rect.width) * this.duration;
                 this.currentTime = Math.max(0, Math.min(seekTo, this.duration));
+                if (this.audio) this.audio.currentTime = this.currentTime;
                 this.updatePlayhead();
                 if(!this.isPlaying) this.drawWaveform();
             });
+
+            grid.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                grid.style.background = 'rgba(255,255,255,0.06)';
+            });
+            grid.addEventListener('dragleave', () => {
+                grid.style.background = '';
+            });
+            grid.addEventListener('drop', (e) => {
+                e.preventDefault();
+                grid.style.background = '';
+                if (e.dataTransfer.files.length > 0) {
+                    this.handleUpload({ target: { files: e.dataTransfer.files } });
+                }
+            });
         }
+
+        this.audio.addEventListener('timeupdate', () => {
+            if (!this.isPlaying) return;
+            this.currentTime = this.audio.currentTime;
+            this.updatePlayhead();
+            this.drawWaveform();
+        });
+
+        this.audio.addEventListener('ended', () => {
+            this.isPlaying = false;
+            if(this.playBtn) this.playBtn.innerText = '▶';
+        });
     }
 
     handleUpload(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        const item = document.createElement('div');
-        item.className = 'media-item';
-        item.style = 'aspect-ratio:auto; padding:15px; display:flex; align-items:center; background:#111; cursor:pointer; margin-bottom:10px;';
-        item.innerHTML = `<span style="color:#00f0ff; font-size:12px; font-weight:600;">${file.name}</span>`;
-        item.onclick = () => this.loadAudio();
-        this.libraryDiv.prepend(item);
-        
-        this.loadAudio();
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+
+        files.forEach((file, index) => {
+            const url = URL.createObjectURL(file);
+            const item = document.createElement('div');
+            item.className = 'media-item';
+            item.style.cssText = 'aspect-ratio:auto; padding:15px; display:flex; align-items:center; background:#111; cursor:pointer; margin-bottom:10px;';
+            item.innerHTML = `<span style="color:#00f0ff; font-size:12px; font-weight:600;">${file.name}</span>`;
+            item.onclick = () => this.loadAudio(file, url);
+            if (this.libraryDiv) this.libraryDiv.prepend(item);
+            if (index === 0) this.loadAudio(file, url);
+        });
     }
 
-    loadAudio() {
+    loadAudio(file, url) {
+        if (!file || !url) return;
         this.audioLoaded = true;
-        this.currentTime = 0;
-        this.updatePlayhead();
-        this.drawWaveform();
+        this.currentFile = file;
+        if (this.currentURL && this.currentURL !== url) {
+            URL.revokeObjectURL(this.currentURL);
+        }
+        this.currentURL = url;
+        this.audio.src = url;
+        this.audio.preload = 'auto';
+        this.audio.volume = this.vol;
+        this.audio.crossOrigin = 'anonymous';
+
+        this.audio.onloadedmetadata = () => {
+            this.duration = Math.max(1, this.audio.duration);
+            this.scale = Math.max(220, window.innerWidth * 0.25) / this.duration;
+            this.currentTime = 0;
+            this.updatePlayhead();
+            this.drawWaveform();
+            if (this.seekInput) {
+                this.seekInput.value = '0';
+            }
+        };
+
+        this.audio.onerror = () => {
+            console.warn('Audio load error', file.name);
+            this.audioLoaded = false;
+        };
+    }
+
+    cleanup() {
+        if(this.animationRef) cancelAnimationFrame(this.animationRef);
+        this.isPlaying = false;
+        if(this.audio) {
+            this.audio.pause();
+            this.audio.src = '';
+        }
+        if(this.currentURL) {
+            URL.revokeObjectURL(this.currentURL);
+            this.currentURL = null;
+        }
     }
 
     togglePlayback() {
-        if(!this.audioLoaded) return;
+        if(!this.audioLoaded || !this.audio.src) return;
         this.isPlaying = !this.isPlaying;
-        if(this.playBtn) this.playBtn.innerText = this.isPlaying ? 'PAUSE' : 'PLAY';
-        
+        if(this.playBtn) this.playBtn.innerText = this.isPlaying ? 'PAUSE' : '▶';
+
         if(this.isPlaying) {
+            this.audio.play().catch(() => {});
             this.lastTime = performance.now();
             this.playLoop();
         } else {
+            this.audio.pause();
             if(this.animationRef) cancelAnimationFrame(this.animationRef);
             if(this.meterL) this.meterL.style.height = '10%';
             if(this.meterR) this.meterR.style.height = '10%';
@@ -2698,30 +3301,19 @@ class ProAudioEditor {
 
     playLoop() {
         if(!this.isPlaying) return;
-        
-        const now = performance.now();
-        const dt = (now - this.lastTime) / 1000;
-        this.lastTime = now;
-        
-        this.currentTime += dt;
-        if(this.currentTime >= this.duration) {
-            this.currentTime = 0;
-            this.togglePlayback();
-            return;
-        }
+        if (!this.audio || this.audio.paused) return;
 
+        this.currentTime = this.audio.currentTime;
         this.updatePlayhead();
         this.drawWaveform();
-        
-        // Meters simulation
+
         if(this.meterL && this.meterR) {
-            const hL = Math.random() * 80 * this.vol + 10;
-            const hR = Math.random() * 80 * this.vol + 10;
+            const hL = Math.min(100, Math.max(10, (Math.random() * 50 + 30) * this.vol));
+            const hR = Math.min(100, Math.max(10, (Math.random() * 50 + 30) * this.vol));
             this.meterL.style.height = hL + '%';
             this.meterR.style.height = hR + '%';
-            
-            if (hL > 80) this.meterL.style.background = '#ffca28'; else this.meterL.style.background = '#00f0ff';
-            if (hR > 80) this.meterR.style.background = '#ffca28'; else this.meterR.style.background = '#00f0ff';
+            this.meterL.style.background = hL > 80 ? '#ffca28' : '#00f0ff';
+            this.meterR.style.background = hR > 80 ? '#ffca28' : '#00f0ff';
         }
 
         this.animationRef = requestAnimationFrame(() => this.playLoop());
@@ -2800,18 +3392,38 @@ class ProAudioEditor {
     }
 
     exportAudio(btn) {
-        if(!this.audioLoaded) return;
+        if(!this.audioLoaded || !this.currentFile) return;
         const h3 = btn.querySelector('.bento-title');
-        const ogText = h3.innerText;
-        h3.innerText = 'MIXING DOWN...';
-        setTimeout(() => {
-            const a = document.createElement('a');
-            a.download = 'Studio_Mix_Final.wav';
-            a.href = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA'; // Dummy tiny wav
-            a.click();
+        const ogText = h3 ? h3.innerText : '';
+        if (h3) h3.innerText = 'EXPORTING...';
+
+        const downloadName = `Studio_Mix_Final.${this.currentFile.name.split('.').pop() || 'mp3'}`;
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        const exportUrl = this.currentURL || URL.createObjectURL(this.currentFile);
+        a.href = exportUrl;
+        a.download = downloadName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        if (h3) {
             h3.innerText = '✅ EXPORTED';
             setTimeout(() => h3.innerText = ogText, 2000);
-        }, 1500);
+        }
+    }
+
+    cleanup() {
+        if(this.animationRef) cancelAnimationFrame(this.animationRef);
+        this.isPlaying = false;
+        if(this.audio) {
+            this.audio.pause();
+            this.audio.src = '';
+        }
+        if(this.currentURL) {
+            URL.revokeObjectURL(this.currentURL);
+            this.currentURL = null;
+        }
     }
 }
 
