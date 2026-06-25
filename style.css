@@ -2178,6 +2178,25 @@ textarea.fake-code {
 .playhead-tri {
     position: absolute; top: -5px; left: -6px; width: 12px; height: 12px; background: #fff; border-radius: 50%; pointer-events: auto; cursor: ew-resize; box-shadow: 0 0 10px rgba(255,255,255,0.5);
 }
+.timeline-marker-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 45;
+}
+.timeline-marker {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 8px rgba(255,255,255,0.2);
+    cursor: pointer;
+    pointer-events: auto;
+}
 .pro-clip-segment {
     position: absolute; height: 36px; top: 3px; border-radius: 8px; font-size: 10px; font-weight: 600; padding: 0 10px; display: flex; align-items: center; cursor: pointer; color: #000; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: transform 0.2s;
 }
@@ -2511,7 +2530,62 @@ textarea.fake-code {
     position: relative;
     overflow: hidden;
 }
-
+.audio-playhead {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 2px;
+    height: 100%;
+    background: rgba(255,255,255,0.9);
+    pointer-events: none;
+}
+.audio-timeline-row {
+    width: 100%;
+    height: 14px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.12);
+    position: relative;
+    overflow: hidden;
+}
+.audio-time-row {
+    display: flex;
+    justify-content: flex-end;
+    font-size: 11px;
+    color: #fff;
+    opacity: 0.8;
+}
+.au-media-library {
+    margin-top: 16px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 14px;
+}
+.au-media-header {
+    color: #fff;
+    font-size: 10px;
+    letter-spacing: 1px;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+.audio-library {
+    min-height: 120px;
+    max-height: 180px;
+    overflow-y: auto;
+    display: grid;
+    gap: 10px;
+}
+.audio-library .media-item {
+    background: rgba(255,255,255,0.08);
+    padding: 12px 14px;
+    border-radius: 16px;
+    cursor: pointer;
+    color: #fff;
+    transition: transform 0.25s ease, background 0.25s ease;
+}
+.audio-library .media-item:hover {
+    transform: translateX(4px);
+    background: rgba(255,255,255,0.16);
+}
 .au-slider {
     -webkit-appearance: none;
     width: 100%;
@@ -3214,4 +3288,6 @@ textarea.fake-code {
 /* ====================================================================
    END PREMIUM VISUAL SYSTEM v5.0
    ==================================================================== */
-
+
+
+
